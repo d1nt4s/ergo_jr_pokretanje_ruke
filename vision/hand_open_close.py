@@ -1,54 +1,33 @@
 # vision/hand_open_close.py
 import cv2
-import mediapipe as mp
-from typing import Literal
-
-State = Literal["OPEN", "CLOSE", "UNKNOWN"]
 
 class HandOpenCloseDetector:
     def __init__(self):
-        self.mp_hands = mp.solutions.hands
-        self.hands = self.mp_hands.Hands(
-            static_image_mode=False,
-            max_num_hands=1,
-            min_detection_confidence=0.6,
-            min_tracking_confidence=0.6,
+        self.open_threshold = 9000
+        self.close_threshold = 4000
+
+    def infer(self, frame_bgr):
+        gray = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2GRAY)
+        blur = cv2.GaussianBlur(gray, (7, 7), 0)
+
+        _, thresh = cv2.threshold(
+            blur, 0, 255,
+            cv2.THRESH_BINARY_INV + cv2.THRESH_OTSU
         )
 
-    def infer(self, frame_bgr) -> State:
-        # MediaPipe работает в RGB
-        frame_rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
-        result = self.hands.process(frame_rgb)
+        contours, _ = cv2.findContours(
+            thresh, cv2.RETR_EXTERNAL, cv2.CHAIN_APPROX_SIMPLE
+        )
 
-        if not result.multi_hand_landmarks:
+        if not contours:
             return "UNKNOWN"
 
-        landmarks = result.multi_hand_landmarks[0].landmark
+        hand_contour = max(contours, key=cv2.contourArea)
+        area = cv2.contourArea(hand_contour)
 
-        fingers_up = self._count_fingers_up(landmarks)
-
-        if fingers_up >= 4:
+        if area > self.open_threshold:
             return "OPEN"
-        elif fingers_up <= 1:
+        elif area < self.close_threshold:
             return "CLOSE"
         else:
             return "UNKNOWN"
-
-    def _count_fingers_up(self, lm) -> int:
-        """
-        Очень простая логика:
-        палец считается поднятым, если tip выше pip по y
-        """
-        tips = [8, 12, 16, 20]   # index, middle, ring, pinky
-        pips = [6, 10, 14, 18]
-
-        count = 0
-        for tip, pip in zip(tips, pips):
-            if lm[tip].y < lm[pip].y:
-                count += 1
-
-        # большой палец (упрощённо)
-        if abs(lm[4].x - lm[3].x) > 0.04:
-            count += 1
-
-        return count

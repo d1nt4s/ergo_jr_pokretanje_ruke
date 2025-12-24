@@ -6,7 +6,7 @@ from utils.debounce import Debounce
 from vision.hand_open_close import HandOpenCloseDetector
 from control.gripper import GripperController
 
-CAMERA_INDEX = 11  # у вас рабочий индекс
+CAMERA_INDEX = 0  # у вас рабочий индекс
 
 def main():
     # 1) Камера
@@ -23,6 +23,15 @@ def main():
     # 4) Гриппер
     gripper = GripperController(gripper_motor_name="m6")
     gripper.connect()
+    
+    poppy.rest_posture.start()
+
+    poppy.m1.compliant = False
+    poppy.m2.compliant = False
+    poppy.m3.compliant = False
+    poppy.m4.compliant = False
+    poppy.m5.compliant = False
+    poppy.m6.compliant = False
 
     print("Система запущена. Покажи ладонь или кулак.")
 

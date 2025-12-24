@@ -1,25 +1,45 @@
 # app/main.py
 import time
+import cv2
+
 from utils.debounce import Debounce
+from vision.hand_open_close import HandOpenCloseDetector
 from control.gripper import GripperController
 
+CAMERA_INDEX = 11  # у вас рабочий индекс
+
 def main():
-    # 1) подключаем гриппер (на Pi)
+    # 1) Камера
+    cap = cv2.VideoCapture(CAMERA_INDEX)
+    if not cap.isOpened():
+        raise RuntimeError("Не удалось открыть камеру")
+
+    # 2) Vision
+    detector = HandOpenCloseDetector()
+
+    # 3) Debounce
+    deb = Debounce(stable_frames=5)
+
+    # 4) Гриппер
     gripper = GripperController(gripper_motor_name="m6")
     gripper.connect()
 
-    # 2) фильтр от дребезга
-    deb = Debounce(stable_frames=5)
+    print("Система запущена. Покажи ладонь или кулак.")
 
-    # 3) главный цикл (пока вместо vision пусть будет “ручная подмена”)
     while True:
-        # TODO: заменить на реальный state из vision
-        raw = "UNKNOWN"
+        ret, frame = cap.read()
+        if not ret:
+            continue
 
-        confirmed = deb.update(raw)
+        raw_state = detector.infer(frame)
+        confirmed = deb.update(raw_state)
+
         if confirmed == "OPEN":
+            print("CONFIRMED: OPEN")
             gripper.open()
+
         elif confirmed == "CLOSE":
+            print("CONFIRMED: CLOSE")
             gripper.close()
 
         time.sleep(0.02)

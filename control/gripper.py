@@ -55,7 +55,7 @@ class GripperController:
                 "Run on Raspberry Pi (Poppy OS) and open via poppy.local."
             )
 
-        self.poppy = PoppyErgoJr()
+        self.poppy = PoppyErgoJr(camera='dummy')
         self.m = getattr(self.poppy, self.config.motor_name, None)
         if self.m is None:
             raise RuntimeError(

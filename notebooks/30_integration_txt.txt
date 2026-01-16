@@ -1,0 +1,84 @@
+import time
+import cv2
+import os, sys
+PROJECT_ROOT = os.path.abspath("..")
+os.chdir(PROJECT_ROOT)
+sys.path.insert(0, PROJECT_ROOT)
+
+import cvzone
+from cvzone.HandTrackingModule import HandDetector
+from picamera2 import Picamera2
+from utils.debounce import Debounce
+from vision.hand_open_close import HandOpenCloseDetector
+from control.gripper import GripperController, GripperConfig
+
+CAMERA_INDEX = 0
+
+
+cap = cv2.VideoCapture(CAMERA_INDEX)
+assert cap.isOpened(), "Camera not opened"
+
+picam2 = Picamera2()
+picam2.preview_configuration.main.size = (640,480)
+picam2.preview_configuration.main.format = "RGB888"
+picam2.preview_configuration.align()
+picam2.configure("preview")
+picam2.start()
+
+detector = HandDetector(maxHands=2,detectionCon=0.5, minTrackCon=0.5)
+deb = Debounce(stable_frames=5)
+
+config = GripperConfig(
+    motor_name="m6",
+    open_angle=30,
+    close_angle=90,
+    speed=40
+)
+
+gripper = GripperController(config=config, dry_run=False)
+gripper.connect()
+
+list=[]
+
+
+while True:
+    ret, frame = cap.read()
+    if not ret:
+        continue
+    im= picam2.capture_array()
+    im=cv2.flip(im,-1)
+    hands,im=detector.findHands(im,draw=True)
+    
+    raw = detector.infer(frame)
+    confirmed = deb.update(raw)
+
+    """if confirmed == "OPEN":
+        print("OPEN detected")
+        gripper.open()
+
+    elif confirmed == "CLOSE":
+        print("CLOSE detected")
+        gripper.close()"""
+    if len(hands)==2:
+          hand=hands[0]
+          hand1=hands[1]
+          lmlist=hand['lmList']
+          lmlist1=hand1['lmList']
+          cx=(lmlist[4][0])
+          cy=(lmlist[4][1])
+          cx1=(lmlist1[4][0])
+          cy1=(lmlist1[4][1])
+        fingers1 = detector.fingersUp(hand)
+          fingers2=detector.fingersUp(hand1)
+          list = fingers1 + fingers2
+          count_1 = list.count(1)
+          count_0 = list.count(0)
+
+          print("Count of 1s:", count_1)
+          print("Count of 0s:", count_0)
+    cv2.imshow("im",im)
+      key = cv2.waitKey(1)
+    if key == 27:  # esc
+         break
+
+    time.sleep(0.02)

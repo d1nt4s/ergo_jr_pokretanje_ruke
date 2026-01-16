@@ -128,9 +128,9 @@ def command():
     cmd = data.get("cmd")
 
     if cmd == "OPEN":
-        gripper.goal_position = 30
-    elif cmd == "CLOSE":
         gripper.goal_position = 90
+    elif cmd == "CLOSE":
+        gripper.goal_position = 30
     elif cmd == "REST":
         go_to_rest()
     elif cmd == "WAKE":

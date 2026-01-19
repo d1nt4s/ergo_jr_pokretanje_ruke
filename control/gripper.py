@@ -25,8 +25,8 @@ except Exception:  # pragma: no cover
 @dataclass
 class GripperConfig:
     motor_name: str = "m6"  # will be confirmed later (list motors after connect)
-    open_angle: float = 30.0
-    close_angle: float = 90.0
+    open_angle: float = 90.0
+    close_angle: float = 10.0
     speed: int = 50
     # Optional safety clamp. Tune after calibration if needed.
     min_angle: float = -150.0
